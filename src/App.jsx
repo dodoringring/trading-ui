@@ -8,7 +8,7 @@ function App() {
   const [error, setError] = useState(false)
 
   const handleAnalyze = async (e) => {
-    e.preventDefault() // 폼 제출 시 새로고침 방지
+    e.preventDefault()
     if (!ticker.trim()) return
 
     setLoading(true)
@@ -17,7 +17,6 @@ function App() {
 
     try {
       const response = await axios.get(`http://127.0.0.1:8000/analyze?ticker=${ticker}`)
-
       if (response.data.status === 'error') {
         alert(response.data.message)
         setError(true)
@@ -34,136 +33,156 @@ function App() {
   }
 
   return (
-    // 전체 배경은 아주 어두운 회색, 내용은 중앙에 스마트폰 비율(max-w-md)로 배치
-    <div className="min-h-screen bg-[#0a0a0a] flex justify-center font-sans text-gray-100 selection:bg-green-500/30">
+    // 🌟 1. 전체 화면을 상하로 꽉 채우고(min-h-screen) 세로 배치(flex-col)합니다.
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-100 font-sans selection:bg-green-500/30 flex flex-col">
 
-      {/* 📱 모바일 앱 컨테이너 */}
-      <div className="w-full max-w-md bg-[#121212] min-h-screen shadow-2xl flex flex-col relative border-x border-gray-800/50">
-
-        {/* 상단 헤더 (고정) */}
-        <header className="sticky top-0 z-20 bg-[#121212]/90 backdrop-blur-md px-6 py-4 border-b border-gray-800 flex justify-between items-center">
-          <h1 className="text-lg font-extrabold bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">
-            AI TRADER
+      {/* 헤더 */}
+      <header className="sticky top-0 z-20 bg-[#121212]/90 backdrop-blur-md border-b border-gray-800">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <h1 className="text-xl font-extrabold bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent tracking-wide">
+            AI TRADER PRO
           </h1>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
-            <span className="text-xs font-medium text-gray-400">LIVE</span>
+            <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
+            <span className="text-sm font-medium text-gray-400 tracking-wider">LIVE</span>
           </div>
-        </header>
-
-        {/* 검색창 영역 */}
-        <div className="px-6 py-5 bg-gradient-to-b from-[#121212] to-transparent">
-          <form onSubmit={handleAnalyze} className="relative flex items-center">
-            <input
-              type="text"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
-              placeholder="종목명 또는 코드 (예: 삼성전자)"
-              className="w-full bg-[#1e1e1e] border border-gray-700/50 text-white px-5 py-4 rounded-2xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all text-sm pr-16 shadow-inner"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="absolute right-2 top-2 bottom-2 bg-green-600 hover:bg-green-500 text-white px-4 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
-            >
-              {loading ? '...' : '분석'}
-            </button>
-          </form>
         </div>
+      </header>
 
-        {/* 메인 콘텐츠 영역 (스크롤) */}
-        <div className="flex-1 overflow-y-auto px-6 pb-10 space-y-6">
+      {/* 🌟 2. 메인 영역을 화면 '정중앙'으로 밀어줍니다 (flex-1, justify-center, items-center) */}
+      <main className="flex-1 flex flex-col justify-center items-center w-full py-8 md:py-12">
 
-          {/* 로딩 화면 */}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-              <div className="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin mb-4"></div>
-              <p className="text-gray-400 text-sm font-medium">AI가 시장을 분석하고 있습니다...</p>
-            </div>
-          )}
+        {/* 🌟 3. 내용물들이 너무 퍼지지 않게 최대 너비를 고정(max-w-6xl)합니다 */}
+        <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
 
-          {/* 대기 화면 (초기 상태) */}
-          {!data && !loading && !error && (
-            <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-              <div className="text-6xl mb-4">📈</div>
-              <p className="text-sm font-medium">어떤 종목을 분석해 볼까요?</p>
-            </div>
-          )}
-
-          {/* 결과 화면 */}
-          {data && !loading && (
-            <div className="animate-fade-in-up space-y-5">
-
-              {/* 1. 가격 카드 */}
-              <div className="bg-[#1e1e1e] rounded-3xl p-6 shadow-lg border border-gray-800/50">
-                <div className="flex justify-between items-start mb-2">
-                  <h2 className="text-xl font-bold text-white">{data.name}</h2>
-                  <span className="text-xs font-mono text-gray-500 bg-black/30 px-2 py-1 rounded-md">{data.code}</span>
-                </div>
-                <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-4xl font-extrabold tracking-tight">
-                    {data.current_price.toLocaleString()}
-                  </span>
-                  <span className="text-gray-400 font-medium">원</span>
-                </div>
+          {/* 검색창 영역 */}
+          <div className="max-w-2xl mx-auto mb-10 md:mb-16 w-full">
+            <form onSubmit={handleAnalyze} className="relative group w-full">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+              <div className="relative flex items-center bg-[#1e1e1e] rounded-2xl border border-gray-700/50 overflow-hidden shadow-inner w-full">
+                <input
+                  type="text"
+                  value={ticker}
+                  onChange={(e) => setTicker(e.target.value)}
+                  placeholder="종목명 또는 코드 (예: 삼성전자)"
+                  className="w-full bg-transparent text-white px-6 py-4 md:py-5 focus:outline-none text-base md:text-lg"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="whitespace-nowrap bg-green-600 hover:bg-green-500 text-white px-6 md:px-8 py-3 md:py-4 m-1.5 rounded-xl font-bold text-sm md:text-base transition-all disabled:opacity-50"
+                >
+                  {loading ? '분석 중...' : 'AI 분석'}
+                </button>
               </div>
+            </form>
+          </div>
 
-              {/* 2. AI 시그널 카드 (핵심) */}
-              <div className={`relative overflow-hidden rounded-3xl p-6 shadow-lg border ${data.signal === 'buy' ? 'bg-red-950/20 border-red-500/30' :
-                  data.signal === 'sell' ? 'bg-blue-950/20 border-blue-500/30' :
-                    'bg-gray-800/20 border-gray-600/30'
-                }`}>
-                {/* 배경 글로우 효과 */}
-                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 blur-3xl rounded-full opacity-20 ${data.signal === 'buy' ? 'bg-red-500' : data.signal === 'sell' ? 'bg-blue-500' : 'bg-gray-400'
-                  }`}></div>
+          {/* 결과 / 대기 / 로딩 화면 영역 */}
+          <div className="w-full">
 
-                <h3 className="text-xs font-bold text-gray-400 mb-3 relative z-10 text-center">AI TRADING SIGNAL</h3>
-                <div className={`text-center text-5xl font-black uppercase tracking-widest relative z-10 ${data.signal === 'buy' ? 'text-red-500' :
-                    data.signal === 'sell' ? 'text-blue-500' : 'text-gray-400'
-                  }`}>
-                  {data.signal}
-                </div>
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-10 animate-pulse w-full">
+                <div className="w-14 h-14 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin mb-6"></div>
+                <p className="text-gray-400 text-base md:text-lg font-medium">AI가 시장 데이터를 수집하고 분석 중입니다...</p>
               </div>
+            )}
 
-              {/* 3. 보조지표 및 요약 카드 */}
-              <div className="bg-[#1e1e1e] rounded-3xl p-6 shadow-lg border border-gray-800/50">
-                <div className="flex justify-between items-end mb-4">
-                  <h3 className="text-xs font-bold text-gray-400">RSI (14)</h3>
-                  <span className={`text-lg font-bold font-mono ${data.rsi > 70 ? 'text-red-400' : data.rsi < 30 ? 'text-blue-400' : 'text-gray-200'
-                    }`}>
-                    {data.rsi.toFixed(1)}
-                  </span>
-                </div>
+            {!data && !loading && !error && (
+              <div className="flex flex-col items-center justify-center py-10 text-center opacity-40 w-full">
+                <div className="text-7xl mb-6">📈</div>
+                <p className="text-base md:text-lg font-medium">투자하고 싶은 종목을 검색해 보세요.</p>
+              </div>
+            )}
 
-                {/* RSI 게이지 바 */}
-                <div className="w-full h-1.5 bg-gray-800 rounded-full mb-6 overflow-hidden flex">
-                  <div className="h-full bg-blue-500" style={{ width: '30%' }}></div>
-                  <div className="h-full bg-gray-600" style={{ width: '40%' }}></div>
-                  <div className="h-full bg-red-500" style={{ width: '30%' }}></div>
-                  {/* 현재 위치 마커 (절대 위치로 덮어씌움) */}
-                  <div className="absolute w-full h-1.5 -ml-6 pr-12">
-                    <div
-                      className="w-2 h-3 bg-white rounded-full -mt-0.5 shadow-md border border-gray-300 transition-all duration-1000"
-                      style={{ marginLeft: `${Math.min(Math.max(data.rsi, 0), 100)}%` }}
-                    ></div>
+            {/* 그리드 시스템 (분석 결과) */}
+            {data && !loading && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-fade-in-up w-full">
+
+                {/* 가격 카드 */}
+                <div className="md:col-span-5 bg-[#1e1e1e] rounded-3xl p-6 md:p-8 shadow-lg border border-gray-800/50 flex flex-col justify-center w-full">
+                  <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-2xl md:text-3xl font-bold text-white">{data.name}</h2>
+                    <span className="text-sm font-mono text-gray-400 bg-black/40 px-3 py-1.5 rounded-lg border border-gray-700/50">{data.code}</span>
+                  </div>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-5xl md:text-6xl font-extrabold tracking-tighter text-white">
+                      {data.current_price.toLocaleString()}
+                    </span>
+                    <span className="text-xl text-gray-400 font-medium">KRW</span>
                   </div>
                 </div>
 
-                {/* AI 요약 이유 */}
-                <div className="pt-4 border-t border-gray-800">
-                  <h3 className="text-xs font-bold text-gray-400 mb-3 flex items-center gap-1">
-                    <span>💡</span> AI 판단 근거
-                  </h3>
-                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line font-medium">
-                    {data.summary}
-                  </p>
-                </div>
-              </div>
+                {/* AI 시그널 카드 */}
+                <div className={`md:col-span-7 relative overflow-hidden rounded-3xl p-8 md:p-10 shadow-lg border flex flex-col items-center justify-center w-full ${data.signal === 'buy' ? 'bg-red-950/20 border-red-500/30' :
+                  data.signal === 'sell' ? 'bg-blue-950/20 border-blue-500/30' :
+                    'bg-gray-800/20 border-gray-600/30'
+                  }`}>
+                  <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 md:w-64 md:h-64 blur-[80px] rounded-full opacity-30 ${data.signal === 'buy' ? 'bg-red-500' : data.signal === 'sell' ? 'bg-blue-500' : 'bg-gray-400'
+                    }`}></div>
 
-            </div>
-          )}
+                  <h3 className="text-sm md:text-base font-bold text-gray-400 mb-4 relative z-10 tracking-widest">AI TRADING SIGNAL</h3>
+                  <div className={`text-6xl md:text-8xl font-black uppercase tracking-tight relative z-10 ${data.signal === 'buy' ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]' :
+                    data.signal === 'sell' ? 'text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]' :
+                      'text-gray-400 drop-shadow-[0_0_15px_rgba(156,163,175,0.5)]'
+                    }`}>
+                    {data.signal}
+                  </div>
+                </div>
+
+                {/* 보조지표 & AI 분석 카드 */}
+                <div className="md:col-span-12 bg-[#1e1e1e] rounded-3xl p-6 md:p-8 shadow-lg border border-gray-800/50 w-full">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 w-full">
+
+                    {/* RSI 지표 */}
+                    <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-gray-800 pb-6 md:pb-0 md:pr-12 flex flex-col justify-center">
+                      <div className="flex justify-between items-end mb-4">
+                        <h3 className="text-sm font-bold text-gray-400">RSI (14) 지표</h3>
+                        <span className={`text-2xl font-bold font-mono ${data.rsi > 70 ? 'text-red-400' : data.rsi < 30 ? 'text-blue-400' : 'text-gray-200'
+                          }`}>
+                          {data.rsi.toFixed(1)}
+                        </span>
+                      </div>
+
+                      <div className="relative w-full h-2.5 bg-gray-800 rounded-full mb-2 overflow-hidden flex">
+                        <div className="h-full bg-blue-500/80" style={{ width: '30%' }}></div>
+                        <div className="h-full bg-gray-600/50" style={{ width: '40%' }}></div>
+                        <div className="h-full bg-red-500/80" style={{ width: '30%' }}></div>
+                      </div>
+
+                      <div className="relative w-full h-4 -mt-4 mb-2">
+                        <div
+                          className="absolute top-1 w-3 h-4 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] border-2 border-gray-900 transition-all duration-1000 -ml-1.5"
+                          style={{ left: `${Math.min(Math.max(data.rsi, 0), 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+                        <span>0 (과매도)</span>
+                        <span>50</span>
+                        <span>100 (과매수)</span>
+                      </div>
+                    </div>
+
+                    {/* AI 이유 텍스트 */}
+                    <div className="md:col-span-2 flex flex-col justify-center">
+                      <h3 className="text-sm font-bold text-gray-400 mb-4 flex items-center gap-2">
+                        <span className="text-lg">🤖</span> AI 종합 판단 근거
+                      </h3>
+                      <div className="bg-[#121212] p-5 rounded-2xl border border-gray-800/80">
+                        <p className="text-sm md:text-base text-gray-300 leading-relaxed whitespace-pre-line font-medium">
+                          {data.summary}
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
