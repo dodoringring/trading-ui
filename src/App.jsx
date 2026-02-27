@@ -1,45 +1,101 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import axios from 'axios'
+import { AdvancedRealTimeChart } from "react-ts-tradingview-widgets";
 
 function App() {
   const [ticker, setTicker] = useState('삼성전자')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
+  // 상단 State 모음 쪽에 새로고침 로딩 상태 하나 추가!
+  const [topStocks, setTopStocks] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleAnalyze = async (e) => {
-    e.preventDefault()
-    if (!ticker.trim()) return
+  // 🌟 로고 클릭 시 모든 상태를 초기화해서 처음 화면으로 돌아가는 함수
+  const handleGoHome = () => {
+    setTicker('');       // 검색창 비우기
+    setData(null);       // 분석 결과 화면 지우기
+    setError(false);     // 에러 메시지 지우기
+    setLoading(false);   // 혹시 모를 로딩 상태 끄기
+    fetchTopStocks();
+  };
 
-    setLoading(true)
-    setError(false)
-    setData(null)
+  // 🌟 실시간 인기 종목을 서버에서 가져오는 전용 함수
+  const fetchTopStocks = () => {
+    setIsRefreshing(true); // 뺑글뺑글 아이콘 돌기 시작!
+    fetch("https://auto-trading-4bbo.onrender.com/top_stocks")
+      // fetch("http://127.0.0.1:8000/top_stocks")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.top_stocks && Array.isArray(data.top_stocks)) {
+          setTopStocks(data.top_stocks);
+        }
+      })
+      .catch(err => console.error("인기 종목을 못 가져왔어요!", err))
+      .finally(() => {
+        // 0.5초 정도 살짝 여유를 두고 뺑글뺑글 멈추기 (시각적 효과)
+        setTimeout(() => setIsRefreshing(false), 500);
+      });
+  };
+
+  // 화면이 처음 켜질 때 딱 한 번 실행
+  useEffect(() => {
+    fetchTopStocks();
+  }, []);
+
+  // 🌟 1. handleAnalyze 함수 수정
+  // 괄호 안에 directTicker = null 을 추가해서, 버튼을 눌렀을 때 종목명을 직접 받을 수 있게 만듭니다.
+  const handleAnalyze = async (e, directTicker = null) => {
+    // 폼 제출(엔터)로 실행됐을 때만 새로고침을 막아줍니다.
+    if (e) e.preventDefault();
+
+    // 버튼을 클릭해서 들어온 종목명이 있으면 그걸 쓰고, 아니면 검색창(ticker) 값을 씁니다.
+    const searchTarget = directTicker || ticker;
+
+    if (!searchTarget.trim()) return;
+
+    setLoading(true);
+    setError(false);
+    setData(null);
 
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/analyze?ticker=${ticker}`)
+      const response = await axios.get(`https://auto-trading-4bbo.onrender.com/analyze?ticker=${searchTarget}`);
+      // const response = await axios.get(`http://127.0.0.1:8000/analyze?ticker=${searchTarget}`);
       if (response.data.status === 'error') {
-        alert(response.data.message)
-        setError(true)
+        alert(response.data.message);
+        setError(true);
       } else {
-        setData(response.data)
+        setData(response.data);
       }
     } catch (err) {
-      console.error(err)
-      setError(true)
-      alert("서버 연결 실패! 파이썬 서버가 켜져 있는지 확인해주세요.")
+      console.error(err);
+      setError(true);
+      alert("서버 연결 실패! 파이썬 서버가 켜져 있는지 확인해주세요.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  // 🌟 2. 버튼 클릭 함수 수정
+  const handleStockClick = (stockName) => {
+    setTicker(stockName);
+    handleAnalyze(null, stockName); // 이벤트(e) 자리는 비우고, 종목명을 직접 넘겨서 바로 분석 시작!
+  };
+
 
   return (
     // 🌟 1. 전체 화면을 상하로 꽉 채우고(min-h-screen) 세로 배치(flex-col)합니다.
-    <div className="min-h-screen bg-[#0a0a0a] text-gray-100 font-sans selection:bg-green-500/30 flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-100 font-sans selection:bg-green-500/30 flex-col">
 
-      {/* 헤더 */}
+      {/* 🌟 수정된 헤더 (로고 클릭 기능 추가) */}
       <header className="sticky top-0 z-20 bg-[#121212]/90 backdrop-blur-md border-b border-gray-800">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-extrabold bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent tracking-wide">
+          {/* onClick과 cursor-pointer, hover 효과를 추가했습니다! */}
+          <h1
+            onClick={handleGoHome}
+            className="text-xl font-extrabold bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent tracking-wide cursor-pointer hover:opacity-80 transition-opacity"
+            title="처음 화면으로"
+          >
             AI TRADER PRO
           </h1>
           <div className="flex items-center gap-2">
@@ -78,6 +134,61 @@ function App() {
             </form>
           </div>
 
+          {/* 🔥 실시간 인기 검색 종목 영역 (새로고침 + 20개 버전) */}
+          <div className="max-w-2xl mx-auto w-full mb-12">
+            {/* 타이틀 & 새로고침 버튼 영역 */}
+            <div className="flex items-center justify-between mb-4 px-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl animate-bounce">🔥</span>
+                <h3 className="text-lg font-bold text-gray-200 tracking-wide">실시간 인기 검색 TOP 20</h3>
+              </div>
+
+              {/* 🌟 새로고침 버튼 */}
+              <button
+                onClick={fetchTopStocks}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e1e] hover:bg-gray-800 border border-gray-700/50 rounded-lg text-sm font-medium text-gray-400 hover:text-green-400 transition-colors disabled:opacity-50"
+              >
+                <svg
+                  className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-green-400' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                {isRefreshing ? '업데이트 중...' : ''}
+              </button>
+            </div>
+
+            {/* 종목 버튼 리스트 */}
+            <div className="flex flex-wrap gap-2 md:gap-3 px-2">
+              {topStocks && topStocks.length > 0 && !isRefreshing ? (
+                // ✅ 데이터가 있을 때 (20개 쫙 깔아주기)
+                topStocks.map((stock, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleStockClick(stock)}
+                    className="group relative flex items-center gap-2 bg-[#1e1e1e] hover:bg-gradient-to-r hover:from-green-600 hover:to-emerald-500 border border-gray-700/50 hover:border-transparent px-3 py-2 rounded-xl transition-all duration-300 shadow-sm hover:shadow-[0_0_15px_rgba(34,197,94,0.4)] hover:-translate-y-1"
+                  >
+                    <span className="text-xs font-bold text-gray-500 group-hover:text-green-100 bg-black/40 px-1.5 py-0.5 rounded">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm md:text-sm font-medium text-gray-300 group-hover:text-white">
+                      {stock}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                // ⏳ 데이터 가져오는 중 (새로고침 누를 때마다 스켈레톤 보여주기)
+                Array.from({ length: 20 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="animate-pulse bg-[#1e1e1e] border border-gray-800 h-9 w-20 rounded-xl"
+                  ></div>
+                ))
+              )}
+            </div>
+          </div>
+
           {/* 결과 / 대기 / 로딩 화면 영역 */}
           <div className="w-full">
 
@@ -99,17 +210,34 @@ function App() {
             {data && !loading && (
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-fade-in-up w-full">
 
-                {/* 가격 카드 */}
-                <div className="md:col-span-5 bg-[#1e1e1e] rounded-3xl p-6 md:p-8 shadow-lg border border-gray-800/50 flex flex-col justify-center w-full">
-                  <div className="flex justify-between items-start mb-4">
+                {/* 🌟 업그레이드된 가격 & 미니 차트 카드 */}
+                <div className="md:col-span-5 bg-[#1e1e1e] rounded-3xl p-6 md:p-8 shadow-lg border border-gray-800/50 flex flex-col w-full">
+
+                  {/* 상단: 이름과 가격 */}
+                  <div className="flex justify-between items-start mb-2">
                     <h2 className="text-2xl md:text-3xl font-bold text-white">{data.name}</h2>
                     <span className="text-sm font-mono text-gray-400 bg-black/40 px-3 py-1.5 rounded-lg border border-gray-700/50">{data.code}</span>
                   </div>
-                  <div className="flex items-baseline gap-2 mt-2">
+                  <div className="flex items-baseline gap-2 mb-6">
                     <span className="text-5xl md:text-6xl font-extrabold tracking-tighter text-white">
                       {data.current_price.toLocaleString()}
                     </span>
                     <span className="text-xl text-gray-400 font-medium">KRW</span>
+                  </div>
+
+                  {/* 하단: 트레이딩뷰 미니 캔들 차트 */}
+                  <div className="w-full h-48 md:h-64 rounded-xl overflow-hidden border border-gray-700/50 bg-[#121212] relative">
+                    <AdvancedRealTimeChart
+                      symbol={`KRX:${data.code}`} // 한국 주식 코드를 자동으로 넣어줌!
+                      theme="dark"                // 찰떡같은 다크모드
+                      locale="kr"                 // 한국어 설정
+                      autosize                    // 박스 크기에 딱 맞게 자동 조절
+                      hide_top_toolbar={true}     // 윗부분 지저분한 툴바 숨기기
+                      hide_legend={true}          // 범례 숨기기
+                      save_image={false}
+                      backgroundColor="#121212"   // 배경색 맞춤
+                      allow_symbol_change={false} // 다른 종목 검색 못하게 고정
+                    />
                   </div>
                 </div>
 
