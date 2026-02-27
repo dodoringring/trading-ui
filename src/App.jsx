@@ -7,9 +7,9 @@ function App() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
-  // 상단 State 모음 쪽에 새로고침 로딩 상태 하나 추가!
   const [topStocks, setTopStocks] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [strategy, setStrategy] = useState('volatility');
 
   // 🌟 로고 클릭 시 모든 상태를 초기화해서 처음 화면으로 돌아가는 함수
   const handleGoHome = () => {
@@ -23,8 +23,8 @@ function App() {
   // 🌟 실시간 인기 종목을 서버에서 가져오는 전용 함수
   const fetchTopStocks = () => {
     setIsRefreshing(true); // 뺑글뺑글 아이콘 돌기 시작!
-    fetch("https://auto-trading-4bbo.onrender.com/top_stocks")
-      // fetch("http://127.0.0.1:8000/top_stocks")
+    // fetch("https://auto-trading-4bbo.onrender.com/top_stocks")
+    fetch("http://127.0.0.1:8000/top_stocks")
       .then(res => res.json())
       .then(data => {
         if (data && data.top_stocks && Array.isArray(data.top_stocks)) {
@@ -59,8 +59,8 @@ function App() {
     setData(null);
 
     try {
-      const response = await axios.get(`https://auto-trading-4bbo.onrender.com/analyze?ticker=${searchTarget}`);
-      // const response = await axios.get(`http://127.0.0.1:8000/analyze?ticker=${searchTarget}`);
+      // const response = await axios.get(`https://auto-trading-4bbo.onrender.com/analyze?ticker=${searchTarget}&strategy=${strategy}`);
+      const response = await axios.get(`http://127.0.0.1:8000/analyze?ticker=${searchTarget}&strategy=${strategy}`);
       if (response.data.status === 'error') {
         alert(response.data.message);
         setError(true);
@@ -111,11 +111,26 @@ function App() {
         {/* 🌟 3. 내용물들이 너무 퍼지지 않게 최대 너비를 고정(max-w-6xl)합니다 */}
         <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
 
-          {/* 검색창 영역 */}
-          <div className="max-w-2xl mx-auto mb-10 md:mb-16 w-full">
+          {/* 🌟 업그레이드된 검색창 (전략 선택 기능 포함) */}
+          <div className="max-w-3xl mx-auto mb-10 md:mb-16 w-full">
             <form onSubmit={handleAnalyze} className="relative group w-full">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
-              <div className="relative flex items-center bg-[#1e1e1e] rounded-2xl border border-gray-700/50 overflow-hidden shadow-inner w-full">
+
+              <div className="relative flex flex-col md:flex-row items-center bg-[#1e1e1e] rounded-2xl border border-gray-700/50 overflow-hidden shadow-inner w-full">
+
+                {/* 🌟 전략 선택 드롭다운 메뉴 */}
+                <select
+                  value={strategy}
+                  onChange={(e) => setStrategy(e.target.value)}
+                  className="w-full md:w-auto md:min-w-[180px] bg-[#2a2a2a] text-gray-200 px-4 py-3 md:py-5 border-b md:border-b-0 md:border-r border-gray-700/50 focus:outline-none text-sm md:text-base cursor-pointer hover:bg-[#333333] transition-colors appearance-none font-medium"
+                  style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem top 50%', backgroundSize: '0.65rem auto' }}
+                >
+                  <option value="volatility">📈 변동성 돌파</option>
+                  <option value="moving_average">🌊 이동평균선</option>
+                  <option value="rsi">📊 RSI 기반</option>
+                  {/* 파이썬에 만들어두신 다른 전략이 있다면 여기에 value 값을 맞춰서 추가하세요! */}
+                </select>
+
                 <input
                   type="text"
                   value={ticker}
@@ -126,7 +141,7 @@ function App() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="whitespace-nowrap bg-green-600 hover:bg-green-500 text-white px-6 md:px-8 py-3 md:py-4 m-1.5 rounded-xl font-bold text-sm md:text-base transition-all disabled:opacity-50"
+                  className="whitespace-nowrap w-full md:w-auto bg-green-600 hover:bg-green-500 text-white px-6 md:px-8 py-4 md:py-4 m-0 md:m-1.5 rounded-none md:rounded-xl font-bold text-sm md:text-base transition-all disabled:opacity-50"
                 >
                   {loading ? '분석 중...' : 'AI 분석'}
                 </button>
@@ -262,33 +277,56 @@ function App() {
                 <div className="md:col-span-12 bg-[#1e1e1e] rounded-3xl p-6 md:p-8 shadow-lg border border-gray-800/50 w-full">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 w-full">
 
-                    {/* RSI 지표 */}
-                    <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-gray-800 pb-6 md:pb-0 md:pr-12 flex flex-col justify-center">
-                      <div className="flex justify-between items-end mb-4">
-                        <h3 className="text-sm font-bold text-gray-400">RSI (14) 지표</h3>
-                        <span className={`text-2xl font-bold font-mono ${data.rsi > 70 ? 'text-red-400' : data.rsi < 30 ? 'text-blue-400' : 'text-gray-200'
+                    {/* 🌟 업그레이드된 기술적 지표 대시보드 */}
+                    <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-gray-800 pb-6 md:pb-0 md:pr-12 flex flex-col justify-center gap-6">
+                      
+                      {/* 1. RSI 지표 */}
+                      <div>
+                        <div className="flex justify-between items-end mb-3">
+                          <h3 className="text-sm font-bold text-gray-400">RSI (14) <span className="text-xs font-normal text-gray-500 ml-1">상대강도지수</span></h3>
+                          <span className={`text-2xl font-bold font-mono ${
+                            data.rsi > 70 ? 'text-red-400' : data.rsi < 30 ? 'text-blue-400' : 'text-gray-200'
                           }`}>
-                          {data.rsi.toFixed(1)}
-                        </span>
+                            {data.rsi.toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="relative w-full h-2 bg-gray-800 rounded-full mb-2 overflow-hidden flex">
+                          <div className="h-full bg-blue-500/80" style={{ width: '30%' }}></div>
+                          <div className="h-full bg-gray-600/50" style={{ width: '40%' }}></div>
+                          <div className="h-full bg-red-500/80" style={{ width: '30%' }}></div>
+                        </div>
+                        <div className="relative w-full h-4 -mt-3.5 mb-2">
+                          <div
+                            className="absolute top-0 w-2.5 h-3.5 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.8)] transition-all duration-1000 -ml-1.25"
+                            style={{ left: `${Math.min(Math.max(data.rsi, 0), 100)}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                          <span>과매도 (30↓)</span>
+                          <span>과매수 (70↑)</span>
+                        </div>
                       </div>
 
-                      <div className="relative w-full h-2.5 bg-gray-800 rounded-full mb-2 overflow-hidden flex">
-                        <div className="h-full bg-blue-500/80" style={{ width: '30%' }}></div>
-                        <div className="h-full bg-gray-600/50" style={{ width: '40%' }}></div>
-                        <div className="h-full bg-red-500/80" style={{ width: '30%' }}></div>
+                      {/* 2. MACD 지표 */}
+                      <div className="bg-[#121212] p-4 rounded-xl border border-gray-800/80">
+                        <div className="flex justify-between items-start mb-1">
+                          <h3 className="text-sm font-bold text-gray-400">MACD <span className="text-xs font-normal text-gray-500 ml-1">추세지표</span></h3>
+                          <span className={`text-xl font-bold font-mono ${
+                            data.macd > 0 ? 'text-red-400' : data.macd < 0 ? 'text-blue-400' : 'text-gray-200'
+                          }`}>
+                            {data.macd > 0 ? '+' : ''}{data.macd ? data.macd.toFixed(2) : '0.00'}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-xs font-medium">
+                          <span className="text-gray-500">현재 추세 방향</span>
+                          <span className={`px-2 py-1 rounded-md ${
+                            data.macd > 0 ? 'bg-red-900/30 text-red-400' : 'bg-blue-900/30 text-blue-400'
+                          }`}>
+                            {data.macd > 0 ? '📈 상승 추세 (강세)' : '📉 하락 추세 (약세)'}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="relative w-full h-4 -mt-4 mb-2">
-                        <div
-                          className="absolute top-1 w-3 h-4 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] border-2 border-gray-900 transition-all duration-1000 -ml-1.5"
-                          style={{ left: `${Math.min(Math.max(data.rsi, 0), 100)}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
-                        <span>0 (과매도)</span>
-                        <span>50</span>
-                        <span>100 (과매수)</span>
-                      </div>
                     </div>
 
                     {/* AI 이유 텍스트 */}
