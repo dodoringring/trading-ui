@@ -59,7 +59,6 @@ function App() {
     setData(null);
 
     try {
-      // const response = await axios.get(`https://auto-trading-4bbo.onrender.com/analyze?ticker=${searchTarget}&strategy=${strategy}`);
       const response = await axios.get(`http://127.0.0.1:8000/analyze?ticker=${searchTarget}&strategy=${strategy}`);
       if (response.data.status === 'error') {
         alert(response.data.message);
@@ -67,6 +66,7 @@ function App() {
       } else {
         setData(response.data);
       }
+      console.log(response.data);
     } catch (err) {
       console.error(err);
       setError(true);
@@ -128,14 +128,14 @@ function App() {
                   <option value="volatility">📈 변동성 돌파</option>
                   <option value="moving_average">🌊 이동평균선</option>
                   <option value="rsi">📊 RSI 기반</option>
-                  {/* 파이썬에 만들어두신 다른 전략이 있다면 여기에 value 값을 맞춰서 추가하세요! */}
+
                 </select>
 
                 <input
                   type="text"
                   value={ticker}
                   onChange={(e) => setTicker(e.target.value)}
-                  placeholder="종목명 또는 코드 (예: 삼성전자)"
+                  placeholder="종목명 또는 코드 (예: 삼성전자, 애플)"
                   className="w-full bg-transparent text-white px-6 py-4 md:py-5 focus:outline-none text-base md:text-lg"
                 />
                 <button
@@ -233,25 +233,41 @@ function App() {
                     <h2 className="text-2xl md:text-3xl font-bold text-white">{data.name}</h2>
                     <span className="text-sm font-mono text-gray-400 bg-black/40 px-3 py-1.5 rounded-lg border border-gray-700/50">{data.code}</span>
                   </div>
+
+                  {/* 💡 [핵심 수정]: 국내/해외 주식에 따른 통화 및 포맷팅 동적 분기 */}
+                  {data.current_price}
                   <div className="flex items-baseline gap-2 mb-6">
                     <span className="text-5xl md:text-6xl font-extrabold tracking-tighter text-white">
-                      {data.current_price.toLocaleString()}
+                      {data?.code && /^\d{6}$/.test(data.code)
+                        ? // 🇰🇷 국내 주식: 소수점 없이 정수로 포맷팅 (예: 75,400)
+                        Number(data.current_price).toLocaleString('ko-KR', { maximumFractionDigits: 0 })
+                        : // 🇺🇸 미국 주식: 달러 표현을 위해 소수점 2자리까지 유지 (예: 171.55)
+                        Number(data.current_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      }
                     </span>
-                    <span className="text-xl text-gray-400 font-medium">KRW</span>
+                    <span className="text-xl text-gray-400 font-medium">
+                      {data?.code && /^\d{6}$/.test(data.code) ? 'KRW' : 'USD'}
+                    </span>
                   </div>
 
-                  {/* 하단: 트레이딩뷰 미니 캔들 차트 */}
+                  {/* 하단: 트레이딩뷰 미니 캔들 차트 (기존 유지) */}
                   <div className="w-full h-48 md:h-64 rounded-xl overflow-hidden border border-gray-700/50 bg-[#121212] relative">
                     <AdvancedRealTimeChart
-                      symbol={`KRX:${data.code}`} // 한국 주식 코드를 자동으로 넣어줌!
-                      theme="dark"                // 찰떡같은 다크모드
-                      locale="kr"                 // 한국어 설정
-                      autosize                    // 박스 크기에 딱 맞게 자동 조절
-                      hide_top_toolbar={true}     // 윗부분 지저분한 툴바 숨기기
-                      hide_legend={true}          // 범례 숨기기
+                      symbol={
+                        data?.code
+                          ? /^\d{6}$/.test(data.code)
+                            ? `KRX:${data.code}`
+                            : `NASDAQ:${data.code}`
+                          : "NASDAQ:TSLA"
+                      }
+                      theme="dark"
+                      locale="kr"
+                      autosize
+                      hide_top_toolbar={true}
+                      hide_legend={true}
                       save_image={false}
-                      backgroundColor="#121212"   // 배경색 맞춤
-                      allow_symbol_change={false} // 다른 종목 검색 못하게 고정
+                      backgroundColor="#121212"
+                      allow_symbol_change={false}
                     />
                   </div>
                 </div>
@@ -279,14 +295,13 @@ function App() {
 
                     {/* 🌟 업그레이드된 기술적 지표 대시보드 */}
                     <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-gray-800 pb-6 md:pb-0 md:pr-12 flex flex-col justify-center gap-6">
-                      
+
                       {/* 1. RSI 지표 */}
                       <div>
                         <div className="flex justify-between items-end mb-3">
                           <h3 className="text-sm font-bold text-gray-400">RSI (14) <span className="text-xs font-normal text-gray-500 ml-1">상대강도지수</span></h3>
-                          <span className={`text-2xl font-bold font-mono ${
-                            data.rsi > 70 ? 'text-red-400' : data.rsi < 30 ? 'text-blue-400' : 'text-gray-200'
-                          }`}>
+                          <span className={`text-2xl font-bold font-mono ${data.rsi > 70 ? 'text-red-400' : data.rsi < 30 ? 'text-blue-400' : 'text-gray-200'
+                            }`}>
                             {data.rsi.toFixed(1)}
                           </span>
                         </div>
@@ -311,17 +326,15 @@ function App() {
                       <div className="bg-[#121212] p-4 rounded-xl border border-gray-800/80">
                         <div className="flex justify-between items-start mb-1">
                           <h3 className="text-sm font-bold text-gray-400">MACD <span className="text-xs font-normal text-gray-500 ml-1">추세지표</span></h3>
-                          <span className={`text-xl font-bold font-mono ${
-                            data.macd > 0 ? 'text-red-400' : data.macd < 0 ? 'text-blue-400' : 'text-gray-200'
-                          }`}>
+                          <span className={`text-xl font-bold font-mono ${data.macd > 0 ? 'text-red-400' : data.macd < 0 ? 'text-blue-400' : 'text-gray-200'
+                            }`}>
                             {data.macd > 0 ? '+' : ''}{data.macd ? data.macd.toFixed(2) : '0.00'}
                           </span>
                         </div>
                         <div className="mt-2 flex items-center justify-between text-xs font-medium">
                           <span className="text-gray-500">현재 추세 방향</span>
-                          <span className={`px-2 py-1 rounded-md ${
-                            data.macd > 0 ? 'bg-red-900/30 text-red-400' : 'bg-blue-900/30 text-blue-400'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-md ${data.macd > 0 ? 'bg-red-900/30 text-red-400' : 'bg-blue-900/30 text-blue-400'
+                            }`}>
                             {data.macd > 0 ? '📈 상승 추세 (강세)' : '📉 하락 추세 (약세)'}
                           </span>
                         </div>
